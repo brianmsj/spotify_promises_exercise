@@ -10,34 +10,38 @@ var getFromApi = function(endpoint, query) {
 };
 
 
-let artist;
-const getArtist = (name)=> {
-  const query = {
-    q: "Metallica",
-    limit: 1,
-    type: "artist"
-  }
+var artist;
+var getArtist = function(name) {
 
-  return getFromAPI("search, query").then(result => {
-    artist = result.artists.items[0];
-    return getFromAPI (`artists/${artist.id}/related-artists`);
-  }).then (relatedResults => {
-    const relatedArtists = relatedResults.artists;
-    let artistTrackRequests = [];
+    const query = {
+        q: name,
+        limit: 1,
+        type: 'artist'
+    };
 
-    artist.related = relatedArists;
+    return getFromApi('search', query).then(response =>{
+    	artist = response.artists.items[0];
+    	const query2 = {
+    		id: artist.id
+    	}
+    	return getFromApi(`artists/${query2.id}/related-artists`,query2);
 
-    relatedArtists.forEach(artist => {
-      artist.TrackRequests.push(getFromAPI(`artist${artist.id}/top-tracks`), {country:"US"}));
-    });
+    }).then(response => {
+    	console.log(response);
+  	  artist.related = response.artists;
+  	  console.log(artist.related);
+      let promises = [];
+  	  for (var i = 0; i < artist.related.length; i++) {
+  	  	var artistId = artist.related[i].id
+  	  	var artistPromise = getFromApi(`artists/${artistId}/top-tracks`, {country: "US"});
+        promises.push(artistPromise);
+  	  }
 
-    return Promise.all(artistTrackRequests);
-  }).then(topTracks => {topTracks.forEach((currentTracks,num) => {
-      artist.related[num].tracks = currentTracks.tracks;
-
-    });
-
-    return artist;
-  }).catch(error => {console.log(error)});
-
+    	return Promise.all(promises);
+    }).then(response => {
+        artist.related.forEach((artist,i) => {
+          artist.tracks = response[i].tracks;
+        })
+        return artist;
+    })
 };
